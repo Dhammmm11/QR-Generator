@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Generator By Marr</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .preset-btn {
+            transition: all 0.2s;
+        }
+        .preset-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen p-4 md:p-8 flex flex-col md:flex-row gap-6 justify-center items-start">
+
+    <!-- BAGIAN KIRI: Form Input -->
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        <div class="bg-indigo-600 p-6 text-white flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold"><i class="fa-solid fa-qrcode mr-2"></i>QR Generator Pro</h1>
+                <p class="text-indigo-200 text-xs">Buat QR Nominal dengan Logo</p>
+            </div>
+            <button onclick="resetApp()" class="text-indigo-200 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+        </div>
+
+        <div class="p-6 space-y-5">
+            
+            <!-- Input Nominal & Kalkulator -->
+            <div>
+                <label class="block text-slate-700 text-sm font-bold mb-2">Nominal (Support Tambah/Kurang)</label>
+                <div class="relative group">
+                    <span class="absolute left-3 top-3.5 text-slate-400 font-bold group-focus-within:text-indigo-600 transition">Rp</span>
+                    <input type="text" id="nominal" placeholder="0" 
+                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                        onkeypress="handleEnter(event)">
+                </div>
+                <!-- Presets -->
+                <div class="grid grid-cols-4 gap-2 mt-2">
+                    <button onclick="addAmount(10000)" class="preset-btn bg-indigo-50 text-indigo-700 py-1 rounded text-xs font-semibold hover:bg-indigo-100">+10k</button>
+                    <button onclick="addAmount(20000)" class="preset-btn bg-indigo-50 text-indigo-700 py-1 rounded text-xs font-semibold hover:bg-indigo-100">+20k</button>
+                    <button onclick="addAmount(50000)" class="preset-btn bg-indigo-50 text-indigo-700 py-1 rounded text-xs font-semibold hover:bg-indigo-100">+50k</button>
+                    <button onclick="addAmount(100000)" class="preset-btn bg-indigo-50 text-indigo-700 py-1 rounded text-xs font-semibold hover:bg-indigo-100">+100k</button>
+                </div>
+            </div>
+
+            <!-- Catatan -->
+            <div>
+                <label class="block text-slate-700 text-sm font-bold mb-2">Catatan</label>
+                <input type="text" id="note" placeholder="Contoh: Tagihan Listrik" 
+                    class="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition">
+            </div>
+
+            <!-- Kustomisasi Tampilan (Dropdown) -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <button onclick="toggleCustomize()" class="w-full flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100 text-sm font-semibold text-slate-600">
+                    <span><i class="fa-solid fa-paintbrush mr-2"></i>Kustomisasi Tampilan</span>
+                    <i id="chevron" class="fa-solid fa-chevron-down transition-transform"></i>
+                </button>
+                <div id="customizePanel" class="hidden p-4 bg-white border-t border-slate-100 space-y-4">
+                    
+                    <!-- Warna -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-slate-600">Warna QR</span>
+                        <div class="flex gap-2">
+                            <input type="color" id="colorDark" value="#000000" class="w-8 h-8 rounded cursor-pointer border-0">
+                            <input type="color" id="colorLight" value="#ffffff" class="w-8 h-8 rounded cursor-pointer border-0">
+                        </div>
+                    </div>
+
+                    <!-- Logo Upload -->
+                    <div>
+                        <span class="text-sm text-slate-600 block mb-2">Upload Logo (Tengah)</span>
+                        <input type="file" id="logoInput" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="generateQR()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-0.5">
+                Generate QR Code
+            </button>
+        </div>
+    </div>
+
+    <!-- BAGIAN KANAN: Hasil & History -->
+    <div class="w-full max-w-md space-y-6">
+        
+        <!-- Area Hasil -->
+        <div id="resultCard" class="bg-white rounded-2xl shadow-xl p-6 hidden relative">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 to-indigo-600"></div>
+            
+            <h3 class="text-center font-bold text-slate-800 mb-4">Preview Hasil</h3>
+            
+            <!-- Canvas Wrapper untuk QR + Logo -->
+            <div class="flex justify-center mb-4">
+                <div id="qr-container" class="p-4 bg-white border border-slate-200 rounded-xl shadow-inner inline-block">
+                    <!-- QR akan dirender di sini -->
+                    <div id="qrcode" class="relative"></div>
+                </div>
+            </div>
+
+            <div class="text-center mb-6">
+                <h2 id="resNominal" class="text-2xl font-bold text-slate-800">Rp 0</h2>
+                <p id="resNote" class="text-sm text-slate-500">-</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="downloadQR()" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-2 px-4 rounded-lg font-medium text-sm transition">
+                    <i class="fa-solid fa-download"></i> Simpan
+                </button>
+                <button onclick="shareQR()" class="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium text-sm transition">
+                    <i class="fa-brands fa-whatsapp"></i> Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Area Riwayat -->
+        <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-700 text-sm"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Riwayat Terakhir</h3>
+                <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-700">Hapus Semua</button>
+            </div>
+            <ul id="historyList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                <!-- List items will go here -->
+                <li class="p-4 text-center text-xs text-slate-400">Belum ada riwayat</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // --- LOGIC UTAMA ---
+        let currentNominal = 0;
+        let logoImage = null;
+
+        // Inisialisasi
+        document.addEventListener('DOMContentLoaded', loadHistory);
+
+        // Input Formatting & Calculator Logic
+        const nominalInput = document.getElementById('nominal');
+        
+        nominalInput.addEventListener('change', function() {
+            // Evaluasi Matematika Sederhana (aman)
+            try {
+                // Hanya izinkan angka, +, -, *, /
+                let sanitized = this.value.replace(/[^0-9+\-*/]/g, '');
+                // Ganti format ribuan jika user paste "10.000"
+                if(sanitized.indexOf('.') !== -1 && sanitized.length > 3) sanitized = sanitized.replace(/\./g, '');
+                
+                let result = eval(sanitized); // Note: eval di sini relatif aman karena regex ketat di atas
+                if (!isNaN(result)) {
+                    currentNominal = result;
+                    updateInputDisplay();
+                }
+            } catch (e) {
+                // error handling silent
+            }
+        });
+
+        nominalInput.addEventListener('input', function(e) {
+            // Hanya untuk visual real-time format jika user mengetik angka saja
+            if (/^[0-9]+$/.test(this.value.replace(/\./g, ''))) {
+                currentNominal = parseInt(this.value.replace(/\./g, '')) || 0;
+                this.value = currentNominal.toLocaleString('id-ID');
+            }
+        });
+
+        function handleEnter(e) {
+            if(e.key === 'Enter') generateQR();
+        }
+
+        function addAmount(amount) {
+            currentNominal += amount;
+            updateInputDisplay();
+        }
+
+        function updateInputDisplay() {
+            nominalInput.value = currentNominal.toLocaleString('id-ID');
+        }
+
+        // Toggle Panel Kustomisasi
+        function toggleCustomize() {
+            const panel = document.getElementById('customizePanel');
+            const chevron = document.getElementById('chevron');
+            panel.classList.toggle('hidden');
+            if(panel.classList.contains('hidden')) {
+                chevron.classList.remove('rotate-180');
+            } else {
+                chevron.classList.add('rotate-180');
+            }
+        }
+
+        // Handle Logo Upload
+        document.getElementById('logoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => { logoImage = img; };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function resetApp() {
+            currentNominal = 0;
+            updateInputDisplay();
+            document.getElementById('note').value = '';
+            document.getElementById('resultCard').classList.add('hidden');
+        }
+
+        // --- GENERATE QR ---
+        function generateQR() {
+            if (currentNominal === 0) {
+                alert("Masukkan nominal terlebih dahulu");
+                return;
+            }
+
+            const note = document.getElementById('note').value;
+            const colorDark = document.getElementById('colorDark').value;
+            const colorLight = document.getElementById('colorLight').value;
+            
+            // Tampilkan kartu hasil
+            document.getElementById('resultCard').classList.remove('hidden');
+            
+            // Format Data Text
+            const textData = `Rp ${currentNominal.toLocaleString('id-ID')}` + (note ? ` (${note})` : '');
+            
+            // Render Text
+            document.getElementById('resNominal').innerText = `Rp ${currentNominal.toLocaleString('id-ID')}`;
+            document.getElementById('resNote').innerText = note || '-';
+
+            // Bersihkan QR lama
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+
+            // Buat QR Code
+            new QRCode(qrContainer, {
+                text: textData,
+                width: 200,
+                height: 200,
+                colorDark : colorDark,
+                colorLight : colorLight,
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // Handle Logo Overlay (Manual Injection setelah QR jadi)
+            setTimeout(() => {
+                if (logoImage) {
+                    const imgQR = qrContainer.querySelector('img');
+                    if(imgQR) {
+                        // Kita tidak bisa langsung menimpa imgQR dari qrcodejs karena src-nya base64
+                        // Kita akan membuat div wrapper agar logo bisa di absolute center
+                        
+                        // Hapus konten lama dan gambar ulang
+                        renderCanvasWithLogo(textData, colorDark, colorLight);
+                    }
+                }
+            }, 100);
+
+            // Simpan ke History
+            saveToHistory(currentNominal, note);
+        }
+
+        // Render Ulang di Canvas agar bisa didownload dengan Logo
+        function renderCanvasWithLogo(text, colorDark, colorLight) {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ''; // Clear
+
+            // Buat QR di memori dulu (bukan di DOM) untuk mendapatkan datanya
+            const tempDiv = document.createElement('div');
+            const qrTemp = new QRCode(tempDiv, {
+                text: text,
+                width: 200,
+                height: 200,
+                colorDark : colorDark,
+                colorLight : colorLight,
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // Tunggu sebentar generate
+            setTimeout(() => {
+                const qrImg = tempDiv.querySelector('img');
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+
+                // Gambar QR ke Canvas
+                ctx.drawImage(qrImg, 0, 0);
+
+                // Gambar Logo di Tengah
+                if (logoImage) {
+                    const logoSize = 50; // Ukuran logo
+                    const logoPos = (200 - logoSize) / 2;
+                    
+                    // Buat background putih di belakang logo agar QR code tidak menabrak
+                    ctx.fillStyle = "#ffffff"; 
+                    ctx.fillRect(logoPos - 2, logoPos - 2, logoSize + 4, logoSize + 4);
+
+                    ctx.drawImage(logoImage, logoPos, logoPos, logoSize, logoSize);
+                }
+
+                // Masukkan Canvas final ke DOM
+                qrContainer.appendChild(canvas);
+
+            }, 50);
+        }
+
+        // --- DOWNLOAD & SHARE ---
+        function downloadQR() {
+            const qrDiv = document.getElementById('qrcode');
+            const canvas = qrDiv.querySelector('canvas') || qrDiv.querySelector('img');
+            
+            if (canvas) {
+                const link = document.createElement('a');
+                // Jika elemennya img, ambil src. Jika canvas, toDataURL
+                link.href = canvas.tagName === 'IMG' ? canvas.src : canvas.toDataURL("image/png");
+                link.download = `QR-${currentNominal}-${Date.now()}.png`;
+                link.click();
+            }
+        }
+
+        async function shareQR() {
+            const qrDiv = document.getElementById('qrcode');
+            const canvas = qrDiv.querySelector('canvas'); // Harus canvas untuk blob
+            
+            if (!canvas) {
+                alert("Format QR saat ini (Image) tidak mendukung share langsung. Silakan download manual.");
+                return;
+            }
+
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], "qr-code.png", { type: "image/png" });
+                
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: 'QR Code Tagihan',
+                            text: `Tagihan sebesar Rp ${currentNominal.toLocaleString('id-ID')}`,
+                            files: [file]
+                        });
+                    } catch (err) {
+                        console.log('Share dibatalkan');
+                    }
+                } else {
+                    alert("Browser Anda tidak mendukung fitur share langsung.");
+                }
+            });
+        }
+
+        // --- HISTORY SYSTEM (LocalStorage) ---
+        function saveToHistory(nominal, note) {
+            let history = JSON.parse(localStorage.getItem('qrHistory')) || [];
+            
+            const newItem = {
+                id: Date.now(),
+                nominal: nominal,
+                note: note,
+                date: new Date().toLocaleDateString('id-ID')
+            };
+
+            // Tambahkan ke depan, batasi 10 item
+            history.unshift(newItem);
+            if(history.length > 10) history.pop();
+
+            localStorage.setItem('qrHistory', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            let history = JSON.parse(localStorage.getItem('qrHistory')) || [];
+            const listEl = document.getElementById('historyList');
+            listEl.innerHTML = '';
+
+            if (history.length === 0) {
+                listEl.innerHTML = '<li class="p-4 text-center text-xs text-slate-400">Belum ada riwayat</li>';
+                return;
+            }
+
+            history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'p-3 hover:bg-slate-50 flex justify-between items-center cursor-pointer transition';
+                li.onclick = () => restoreFromHistory(item.nominal, item.note);
+                
+                li.innerHTML = `
+                    <div>
+                        <p class="font-bold text-slate-700 text-sm">Rp ${item.nominal.toLocaleString('id-ID')}</p>
+                        <p class="text-xs text-slate-500">${item.note || 'Tanpa catatan'}</p>
+                    </div>
+                    <span class="text-[10px] text-slate-400">${item.date}</span>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function restoreFromHistory(nominal, note) {
+            currentNominal = nominal;
+            document.getElementById('note').value = note;
+            updateInputDisplay();
+            // Scroll ke atas
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function clearHistory() {
+            if(confirm("Hapus semua riwayat?")) {
+                localStorage.removeItem('qrHistory');
+                loadHistory();
+            }
+        }
+    </script>
+</body>
+</html>
+
